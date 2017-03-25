@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title></title>
+  </head>
+  <body>
+    <select id="owner" name="owner" onchange="main()">
+      <option value="wjl" selected>wjl</option>
+      <option value="diwu">diwu</option>
+    </select>
+    <div id="table"></div>
+    <div id="info"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script>
+var data = [["owner", "category", "action", "amount", "total_usd"], ["diwu", "eth", "buy", 12.922, 99.5], ["diwu", "eth", "buy", 5.0, 50.45], ["diwu", "eth", "buy", 4.7575, 47.57], ["diwu", "eth", "buy", 5.3172, 49.76], ["diwu", "eth", "buy", 8.8683, 98.97], ["diwu", "eth", "buy", 3.3223, 49.65], ["diwu", "eth", "buy", 4.9283, 99.74], ["diwu", "eth", "buy", 0.023434, 0.99], ["wjl", "eth", "buy", 5.4136, 200.25], ["wjl", "eth", "buy", 5.0002, 199.55], ["wjl", "eth", "buy", 4.4142, 197.62], ["wjl", "eth", "buy", 4.5728, 199.28], ["wjl", "eth", "buy", 4.9964, 198.2], ["wjl", "eth", "buy", 4.2207, 199.08], ["wjl", "btc", "buy", 0.21939, 198.35]];
+var getRate = function(toCurrency, callback) {
+  var url = "https://poloniex.com/public?command=returnTicker";
+  $.getJSON(url).done(function (resp) {
+    callback(parseFloat(resp['USDT_' + toCurrency]['last']));
+  });
+};
+var accumulateResult = function(allDataForOwner, currency, callback) {
+  console.log(allDataForOwner);
+  var totalInvestUSD = allDataForOwner.filter(function(d) {
+    return d[1] === currency;
+  }).map(function(d) {
+    return d[2] === 'buy' ? d[4] : -1 * d[4];
+  }).reduce(function(accu, current) {
+    return accu + current;
+  }, 0);
+  var totalCurrencyHold = allDataForOwner.filter(function(d) {
+    return d[1] === currency;
+  }).map(function(d) {
+    return d[2] === 'buy' ? d[3] : -1 * d[3];
+  }).reduce(function(accu, current) {
+    return accu + current;
+  }, 0);
+  getRate(currency.toUpperCase(),function (rate) {
+    var roi = (rate * totalCurrencyHold - totalInvestUSD) / totalInvestUSD;
+    if (Number.isNaN(roi)) {
+      roi = 0;
+    }
+    callback({
+      currency: currency,
+      totalInvestUSD: totalInvestUSD,
+      totalCurrencyHold: totalCurrencyHold,
+      currentRate: rate,
+      currentValueHold: rate * totalCurrencyHold,
+      roi: roi
+    });
+  });
+};
+var renderAccuResult = function(accu) {
+  var currencyMap = {
+    'btc': '比特币',
+    'eth': '以太币'
+  };
+  return '[{0}] 总投资${1}, 总持有${2}, 目前单价${3}, 目前持有价值${4}, 盈利(ROI){5}%<br>'
+      .replace('{0}', currencyMap[accu.currency])
+      .replace('{1}', accu.totalInvestUSD)
+      .replace('{2}', accu.totalCurrencyHold)
+      .replace('{3}', accu.currentRate)
+      .replace('{4}', accu.currentValueHold)
+      .replace('{5}', Math.round(accu.roi * 10000) / 100);
+};
+var main = function() {
+  var ownerSelected = $('#owner').val();
+  var $table = $(
+      '<div>' +
+      '<table border="1" cellpadding="10">' +
+      '<tr><th>owner</th><th>币种</th><th>操作</th><th>数量</th><th>总计大洋</th></tr>' +
+      '</table>' +
+      '</div>'
+  );
+  var allDataForOwner = data.slice(1).filter(function (d) { return d[0] === ownerSelected });
+  for (var idx in allDataForOwner) {
+    var dataitem = allDataForOwner[idx];
+    $table.find('table').append($(
+        '<tr>' +
+        dataitem.map(function (d) { return '<td>'+d+'</td>'; }).join('') +
+        '</tr>'
+    ));
+  }
+  $('#table').html($table.html());
+  accumulateResult(allDataForOwner, 'btc', function (btcAccu) {
+    accumulateResult(allDataForOwner, 'eth', function (ethAccu) {
+      $('#info').html(renderAccuResult(btcAccu) + renderAccuResult(ethAccu));
+    });
+  });
+};
+main();
+    </script>
+  </body>
+</html>
