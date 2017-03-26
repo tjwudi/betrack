@@ -56,7 +56,7 @@ var renderAccuResult = function(accu) {
     'btc': '比特币',
     'eth': '以太币'
   };
-  return '[{0}] 总投资${1}, 总持有${2}, 目前单价${3}, 目前持有价值${4}, 盈利(ROI){5}%<br>'
+  return '[{0}] 总投资${1}, 总持有{2}, 目前单价${3}, 目前持有价值${4}, 盈利(ROI){5}%<br>'
       .replace('{0}', currencyMap[accu.currency])
       .replace('{1}', accu.totalInvestUSD)
       .replace('{2}', accu.totalCurrencyHold)
